@@ -10,7 +10,6 @@ A [Claude Skill](https://docs.claude.com/en/docs/agents-and-tools/agent-skills) 
 | SGE / UGE (Grid Engine) | `qsub` | PEs, per-slot memory, arrays |
 | HTCondor | `condor_submit` | submit files, file transfer, queue sweeps, DAG pointers |
 
-The skill enforces the things that actually make first submissions fail: matching the resource request to the launch line, never inventing site-specific names (partitions, accounts, PEs, module versions), scheduler-specific memory semantics, log directories that must exist before submission, and array jobs that genuinely map task IDs to work.
 
 ## Download and install
 

@@ -31,6 +31,8 @@ Claude Code discovers skills in those directories automatically. Update later wi
 
 Download `hpc-submit.skill` from this repository's [Releases](../../releases) page, then upload it under **Settings → Capabilities → Skills**.
 
+> Adaptation to Codex ongoing, if there is any package that the community is interested, feel free to open pull request and contribute the field of agentic coding!
+
 ## How to use
 
 Describe the job in plain language, and the skill triggers on requests for *job scripts*, *submission scripts*, or running things on a *cluster*, and it infers the scheduler from context if you don't name it:

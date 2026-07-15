@@ -20,10 +20,10 @@ Clone this repository into your personal skills directory:
 
 ```bash
 # personal (available in every project)
-git clone https://github.com/<your-username>/hpc-submit.git ~/.claude/skills/hpc-submit
+git clone https://github.com/ting2025/hpc-submit.git ~/.claude/skills/hpc-submit
 
 # or project-scoped (available to collaborators in one repo)
-git clone https://github.com/<your-username>/hpc-submit.git <project>/.claude/skills/hpc-submit
+git clone https://github.com/ting2025/hpc-submit.git <project>/.claude/skills/hpc-submit
 ```
 
 Claude Code discovers skills in those directories automatically. Update later with `git pull`.

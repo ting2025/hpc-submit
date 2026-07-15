@@ -26,15 +26,15 @@ git clone https://github.com/<your-username>/hpc-submit.git ~/.claude/skills/hpc
 git clone https://github.com/<your-username>/hpc-submit.git <project>/.claude/skills/hpc-submit
 ```
 
-That's it — Claude Code discovers skills in those directories automatically. Update later with `git pull`.
+Claude Code discovers skills in those directories automatically. Update later with `git pull`.
 
 ### Claude.ai and the Claude desktop/mobile apps
 
-Download `hpc-submit.skill` from this repository's [Releases](../../releases) page, then upload it under **Settings → Capabilities → Skills**. (A `.skill` file is a packaged copy of this folder.)
+Download `hpc-submit.skill` from this repository's [Releases](../../releases) page, then upload it under **Settings → Capabilities → Skills**.
 
 ## How to use
 
-Just describe the job in plain language — the skill triggers on requests for job scripts, submission scripts, or running things on a cluster, and it infers the scheduler from context if you don't name it:
+Describe the job in plain language, and the skill triggers on requests for *job scripts*, *submission scripts*, or running things on a *cluster*, and it infers the scheduler from context if you don't name it:
 
 > Write me a SLURM script to train a PyTorch model on 4 GPUs, ~100 GB RAM, about 10 hours.
 
@@ -42,7 +42,7 @@ Just describe the job in plain language — the skill triggers on requests for j
 
 > We're on an HTCondor pool with no shared filesystem. Run ./simulate for each of the 300 .cfg files in params/.
 
-Claude will ask for (or clearly placeholder) anything site-specific it can't know — queue names, accounts, module versions — rather than inventing them, and hands back the exact submit and monitoring commands with the script.
+Claude will ask for anything site-specific it can't know such as queue names, accounts, module versions, or create placeholders, and hands back the exact submit and monitoring commands with the script.
 
 ### Adapting it to your cluster
 
@@ -70,3 +70,17 @@ hpc-submit/
 The exact description Claude uses to decide when to invoke the skill (from `SKILL.md` frontmatter):
 
 > Write correct, ready-to-submit HPC batch job submission scripts for SLURM (sbatch), PBS/Torque/PBS Pro (qsub), LSF (bsub), SGE/UGE (qsub), and HTCondor (condor_submit). Use this skill whenever the user asks for a job script, submission script, submit file, batch script, or wants to run something on a cluster, supercomputer, HPC system, condor pool, or the Open Science Grid — including GPU/deep-learning training jobs, MPI multi-node runs, array jobs and parameter sweeps, high-throughput many-job workloads, and serial or OpenMP jobs — even if they don't name the scheduler explicitly.
+
+## Appendix
+### Author's statement
+This skill is coded by Claude Code, and the author wrote the templates for major syntaxes. This skill is distributed under the MIT license, while Anthropic reserve rights for proper use of code and personal distribution of packages. The author thank University of Notre Dame CRC for their user documentations and tutorial sessions.
+
+### References
+1. Anthropic. *Extend Claude with skills*. https://code.claude.com/docs/en/skills
+2. SchedMD. *sbatch — Slurm Workload Manager*. https://slurm.schedmd.com/sbatch.html
+3. Altair. *Altair PBS Professional 2022.1 User Guide*. https://help.altair.com/2022.1.0/PBS%20Professional/PBSUserGuide2022.1.pdf
+4. IBM. *IBM Spectrum LSF Command Reference*. https://www.ibm.com/docs/en/spectrum-lsf/10.1.0?topic=reference-command
+5. Open Grid Scheduler. *SGE Manual Pages*. https://gridscheduler.sourceforge.net/htmlman/manuals.html
+6. HTConder. *HTCondor Version 25.11.0 Manual*. https://htcondor.readthedocs.io/en/latest/#htcondor-version-release-manual
+
+

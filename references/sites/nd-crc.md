@@ -40,6 +40,18 @@ Syntax: `#$ -pe smp 8`, `#$ -pe mpi-64 128`. The increment must match the target
 - Max **50 concurrent running jobs** per user (across all queues)
 - Max **2,000 tasks** in a single array job (`-t 1-2000` ceiling)
 
+## HTCondor pool (offload high-throughput work off UGE)
+
+Besides UGE, the CRC runs a large **HTCondor** pool — the right tool for many independent serial/threaded jobs (parameter sweeps, per-file/per-molecule work) that would otherwise saturate the `long` queue and the 50-job UGE cap. The client is on the `crcfe` login hosts at `/software/c/condor/.../bin` (`condor_submit`, `condor_q`, `condor_status`); submit from `crcfe01`/`crcfe02`. HTCondor 23.x, ~3530 slots (verify live with `condor_status`).
+
+- **Shared filesystem**: every slot reports `FileSystemDomain == UidDomain == "nd.edu"`, so `/users`, `/groups`, and conda envs are visible pool-wide. Use `should_transfer_files = NO` with `initialdir` on a shared-FS path (no `transfer_input_files` needed); HTCondor then auto-adds `TARGET.FileSystemDomain == MY.FileSystemDomain` so jobs only land where those mounts exist. Confirm the model on any pool with `condor_status -af FileSystemDomain | sort | uniq -c`.
+- **OS pin**: overwhelmingly RHEL9 with a few RHEL8 slots — set `requirements = (OpSysMajorVer == 9)` for binaries built on the EL9 login nodes / conda envs.
+- **The environment is bare** (see `htcondor.md` → "The environment is bare"). Two gotchas hit CRC jobs specifically, both fixed in the wrapper:
+  1. `$HOME` is unset → Open MPI codes (NWChem, etc.) abort in `opal_init`. Fix: `export HOME="$_CONDOR_SCRATCH_DIR"`.
+  2. `conda` is **not** on PATH → activate properly by sourcing the base at `/software/c/conda/<ver>/etc/profile.d/conda.sh` (the shared `/software` = `superior-data:/primary_software` mount, visible pool-wide) then `conda activate /users/<netid>/.conda/envs/<env>`. A bare `PATH=$env/bin:$PATH` skips `activate.d` and leaves e.g. `NWCHEM_BASIS_LIBRARY` unset ("bas_tag_lib: failed opening basis file" → `MPI_ABORT`).
+- **Concurrency** is governed by the pool's fair-share, *not* the 50-job UGE cap; use `max_idle` for very large sweeps (>~10k jobs) to keep the queue responsive.
+- **Tightly-coupled MPI apps (NWChem, Global Arrays codes): run them SERIAL here.** The pool packs jobs and its node types behave very differently for multi-rank MPI: GPU nodes (`TotalGpus>0`, qa-a10/qa-l40s) crash Global Arrays ("Received an Error in Communication"); older `chas` nodes crawl and never reach SCF; only the AMD EPYC `cepyc` nodes run multi-rank at full speed — and even they collapse (~10000x slowdown, SCF setup 9068 s) when several 4-rank jobs pack onto one node and busy-wait. The reliable, high-throughput answer is one rank per job (`request_cpus = 1`): no inter-rank comms, so no crash/crawl/spin, and it packs cleanly. If you must stay multi-rank, pin `requirements = ... && regexp("cepyc", Machine)` and expect low concurrency. (NWChem memory: config's `memory total 4000 mb` is PER RANK; serial peaks ~4-5 GB, so `request_memory = 10GB` is ample.)
+
 ## Known quirks
 
 - AFS is being retired **May 2027** — don't build new workflows on AFS paths.

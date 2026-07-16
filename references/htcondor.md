@@ -16,6 +16,22 @@ when_to_transfer_output = ON_EXIT
 
 Everything the job reads must be listed in `transfer_input_files` (the `executable` transfers automatically). Files the job creates in its scratch working directory come back automatically on exit; the classic failure is a program writing results to an absolute path that exists only on the submit node — outputs vanish. Have the wrapper write outputs into the job's working directory.
 
+## The environment is bare — the second mental shift
+
+HTCondor does **not** hand the job your login-shell environment. It starts from a nearly empty environment: no `~/.bashrc`, no `/etc/profile.d` sourcing, no `module` init, often **no `$HOME`**. This is the number-one reason a program that runs fine interactively — or that ran fine under SGE/PBS/SLURM — fails the instant it's ported to HTCondor: those schedulers usually preserve much of the submit/login environment, while HTCondor scrubs it. So **when porting an existing SGE/PBS/SLURM job, expect the environment (not the files) to be what breaks**, and reconstruct everything the program needs **inside the wrapper**. Don't reach for `getenv = true` — it copies the *submit* machine's environment, which breaks on execute nodes with different paths/users.
+
+Common casualties, roughly in the order they bite:
+
+- **`$HOME` is unset (or points somewhere unwritable).** Anything that reads per-user config fails in confusing ways — Open MPI aborts in `opal_init` ("Unable to get the user home directory" / "mca_base_var_init failed"); also matplotlib, R, Java, cargo, `~/.ssh`. Fix in the wrapper: `export HOME="$_CONDOR_SCRATCH_DIR"` (always set by the starter, node-local, writable), or a real shared-FS home if the app needs its dotfiles.
+- **`module` / `conda` are not on `PATH`.** Login shells add them via `/etc/profile.d` or `.bashrc`; the job's non-login shell does not. Critically, **`export PATH=$env/bin:$PATH` is NOT equivalent to `conda activate`** — it skips the env's `activate.d` hooks that set library/app variables (`LD_LIBRARY_PATH`, `NWCHEM_BASIS_LIBRARY`, `GMXLIB`, license paths, …). The binary then starts but can't find its data/libraries (e.g. NWChem: "bas_tag_lib: failed opening basis file" → `MPI_ABORT`). Do a *real* activation: `source <base>/etc/profile.d/conda.sh && conda activate /full/path/to/env`, where `<base>` is captured at submit time via `conda info --base` and **lives on a shared filesystem** so it's visible pool-wide. Fall back to sourcing the env's own `etc/conda/activate.d/*.sh`, and as a last resort export the handful of vars the app needs explicitly.
+- **`USER`/`LOGNAME`, `TMPDIR`, `LANG`/`LC_*`** are frequently unset too — set them if the app cares.
+
+Two habits turn a silent environment failure into a five-second diagnosis:
+1. **Diagnostic echo as the first line of real work** — `echo "check: exe=$(command -v myprog) HOME=$HOME KEYVAR=$KEYVAR"` — so the top of the job's `output` file shows immediately whether activation worked.
+2. **Reproduce the bare environment locally before submitting**: run the wrapper's setup block in a scrubbed shell — `env -i PATH=/usr/bin:/bin bash -c '…'` — and confirm the binaries and key variables resolve. This catches env gaps in seconds instead of after a job schedules, runs, and fails.
+
+On a **shared-FS pool** the files all exist, so failures are almost always these environment gaps rather than missing inputs; on a **no-shared-FS pool** you get both file-transfer *and* environment problems.
+
 ## Core submit commands
 
 | Command | Meaning | Notes |
@@ -152,5 +168,8 @@ queue 15000
 - A job stuck **Idle** usually has unsatisfiable requirements — `condor_q -better-analyze <id>` explains which clause eliminated all machines.
 - A **Held** job did start but hit a policy (over memory, missing input file, bad path) — `condor_q -hold` shows the reason; fix and `condor_release`.
 - Outputs written to absolute paths don't transfer back — write to the job's working directory.
+- **The job starts from a scrubbed environment** (`$HOME` unset, no `module`/`conda` on PATH) — reconstruct it in the wrapper; see "The environment is bare" above. This is the top failure when porting a working SGE/PBS/SLURM job.
+- **Nonzero exit is silent**: a wrapper that fails still lands in **Completed**, not Held — condor doesn't judge exit codes by default. Add `on_exit_hold = (ExitCode =!= 0)` (optionally `max_retries = 2`) to surface/retry failures, or have a resumable driver re-check for the real output *artifact* rather than trusting job completion.
 - No shebang tricks: submit files are not shell scripts; there is no `#CONDOR` directive form.
 - MPI across machines needs `universe = parallel` and pool-admin setup; if a user asks for tightly-coupled multi-node MPI on a condor pool, flag that an HPC scheduler may be the better fit and confirm the pool supports the parallel universe.
+- **Even single-node multi-rank MPI is often a bad fit on a packing/opportunistic pool — prefer serial.** Apps built on Global Arrays / busy-wait MPI (NWChem, GAMESS, many quantum-chem/CFD codes) spin in their comms; when the negotiator packs several multi-rank jobs onto one machine the ranks oversubscribe cores and collapse (one real case: SCF setup that takes seconds took 9068 s), and heterogeneous nodes crash or crawl depending on their fabric (GPU-node IB fabric aborted Global Arrays; older CPU nodes crawled; only one node type ran at full speed). Forcing a safe transport (`OMPI_MCA_pml=ob1`) stops crashes but cripples one-sided comms into a different crawl. For a per-item sweep the fix is to run **serial (`request_cpus = 1`, one rank)**: no inter-rank comms means no fabric sensitivity, no oversubscription spin, clean packing, and far more concurrency — usually faster end-to-end than fragile multi-rank here. Reserve multi-rank for a dedicated/non-packing partition, and when a node type misbehaves, constrain `requirements` by a distinguishing ClassAd (e.g. `TotalGpus == 0`, `regexp("cpupattern", Machine)`).

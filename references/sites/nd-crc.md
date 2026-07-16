@@ -14,7 +14,7 @@ The user's primary cluster. Details below override the generic `references/sge.m
 | `long` | Primary general-access queue | 15 days | General-access nodes: 64-core AMD EPYC 7543, 256 GB RAM, 1 TB SSD (d32cepyc182–247) |
 | `hpc` | HPC nodes | — | 48-core AMD EPYC 7451, 128 GB RAM, 2 TB SSD (d24cepyc067–140) |
 | `largemem` | Large-memory jobs | — | 4 nodes: 64-core EPYC 7543, **2 TB RAM** each |
-| `gpu` | GPU jobs | — | 12 nodes: dual Xeon Gold 6326 (32 cores), 256 GB RAM, **4× NVIDIA A10 per node** (48 GPUs total) |
+| `gpu` | GPU jobs | 4 days | 12 nodes: dual Xeon Gold 6326 (32 cores), 256 GB RAM, **4× NVIDIA A10 per node** (48 GPUs total) |
 
 Host-group targeting is also supported, e.g. `#$ -q *@@general_access` or `#$ -q *@@crc_d32cepyc` (list with `qconf -shgrpl`); users can only submit to host groups their research group has access to (PI emails CRCSupport@nd.edu for access).
 

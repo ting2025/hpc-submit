@@ -10,7 +10,6 @@ A [Claude Skill](https://docs.claude.com/en/docs/agents-and-tools/agent-skills) 
 | SGE / UGE (Grid Engine) | `qsub` | PEs, per-slot memory, arrays |
 | HTCondor | `condor_submit` | submit files, file transfer, queue sweeps, DAG pointers |
 
-The skill enforces the things that actually make first submissions fail: matching the resource request to the launch line, never inventing site-specific names (partitions, accounts, PEs, module versions), scheduler-specific memory semantics, log directories that must exist before submission, and array jobs that genuinely map task IDs to work.
 
 ## Download and install
 
@@ -31,6 +30,8 @@ Claude Code discovers skills in those directories automatically. Update later wi
 ### Claude.ai and the Claude desktop/mobile apps
 
 Download `hpc-submit.skill` from this repository's [Releases](../../releases) page, then upload it under **Settings → Capabilities → Skills**.
+
+> Adaptation to Codex ongoing, if there is any package that the community is interested, feel free to open pull request and contribute the field of agentic coding!
 
 ## How to use
 
